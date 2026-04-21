@@ -1,0 +1,34 @@
+# Виртуальное окружение
+venv/
+env/
+.env
+.venv
+
+# Байт-код Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+
+# Файлы конфигурации IDE
+.vscode/
+.idea/
+
+# Файлы операционной системы
+.DS_Store
+Thumbs.db
+
+# База данных и логи (если будут)
+*.db
+*.sqlite3
+logs/
+*.log
+
+# Docker volumes (опционально, если хочешь игнорировать том с данными)
+# docker-data/
+
+# Файлы с секретами (уже есть .env, но на всякий случай)
+*.secret
+*.key

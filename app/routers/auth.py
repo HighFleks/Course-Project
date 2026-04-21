@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status, HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
@@ -7,6 +8,7 @@ from app.schemas.user import UserCreate, UserLogin, UserOut, Token
 from app.utils.security import verify_password, get_password_hash, create_access_token
 from datetime import timedelta
 from app.config import settings
+from jose import JWTError, jwt
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
