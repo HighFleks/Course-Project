@@ -12,6 +12,13 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Xcode
+build/
+*.xcworkspace
+xcuserdata/
+DerivedData/
+*.xcuserstate
+
 # Файлы конфигурации IDE
 .vscode/
 .idea/
