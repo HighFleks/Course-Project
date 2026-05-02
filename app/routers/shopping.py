@@ -14,7 +14,7 @@ from app.schemas.shopping_list import (
     ShoppingListItemCreate,
     ShoppingListItemUpdate,
     ShoppingListItemOut,
-    GenerateShoppingListRequest,
+    GenerateShoppingListRequest
 )
 from app.routers.auth import get_current_user
 
@@ -115,6 +115,60 @@ async def generate_shopping_list(
         .options(selectinload(ShoppingListItem.ingredient))
     )
     return result.scalars().all()
+
+
+@router.post("/items", response_model=ShoppingListItemOut, status_code=status.HTTP_201_CREATED)
+async def add_item_to_shopping_list(
+    item_data: ShoppingListItemCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Ручное добавление одного ингредиента в список покупок."""
+    # Проверяем, существует ли ингредиент
+    ingredient = await db.get(Ingredient, item_data.ingredient_id)
+    if not ingredient:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+
+    # Проверяем, нет ли уже такого продукта в списке этого пользователя
+    existing = await db.execute(
+        select(ShoppingListItem)
+        .where(
+            ShoppingListItem.user_id == current_user.id,
+            ShoppingListItem.ingredient_id == item_data.ingredient_id
+        )
+    )
+    existing_item = existing.scalar_one_or_none()
+
+    if existing_item:
+        # Увеличиваем количество
+        existing_item.quantity += item_data.quantity
+        await db.commit()
+        await db.refresh(existing_item)
+        # Подгружаем данные ингредиента
+        result = await db.execute(
+            select(ShoppingListItem)
+            .where(ShoppingListItem.id == existing_item.id)
+            .options(selectinload(ShoppingListItem.ingredient))
+        )
+        return result.scalar_one()
+    else:
+        # Создаём новую запись
+        new_item = ShoppingListItem(
+            user_id=current_user.id,
+            ingredient_id=item_data.ingredient_id,
+            quantity=item_data.quantity,
+            is_purchased=False
+        )
+        db.add(new_item)
+        await db.commit()
+        await db.refresh(new_item)
+        # Подгружаем ингредиент
+        result = await db.execute(
+            select(ShoppingListItem)
+            .where(ShoppingListItem.id == new_item.id)
+            .options(selectinload(ShoppingListItem.ingredient))
+        )
+        return result.scalar_one()
 
 
 @router.put("/items/{ingredient_id}", response_model=ShoppingListItemOut)
