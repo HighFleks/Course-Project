@@ -41,7 +41,7 @@ async def is_recipe_available(
 router = APIRouter(prefix="/api/recipes", tags=["recipes"])
 
 
-@router.get("/get_all", response_model=list[RecipeOut])
+@router.get("/", response_model=list[RecipeOut])
 async def get_recipes(
     category: Optional[str] = None,
     db: AsyncSession = Depends(get_db),

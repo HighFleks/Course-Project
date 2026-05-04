@@ -46,13 +46,19 @@ app.include_router(barcode.router)
 async def root():
     return {"message": "Meal Planner API is running!", "status": "ok"}
 
-# Запуск (в terminal)
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+# # Запуск (в terminal)
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
 
 # source venv/bin/activate
 # docker ps
 # docker compose up -d
 # uvicorn app.main:app --reload --port 8000
 # http://127.0.0.1:8000/docs#/
+# uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload - для тестов на телефоне
+
+# {
+#   "email": "user@example.com",
+#   "password": "string"
+# }
