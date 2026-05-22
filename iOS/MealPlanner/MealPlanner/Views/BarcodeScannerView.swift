@@ -13,26 +13,54 @@ struct BarcodeScannerView: View {
             VStack {
                 HStack {
                     Spacer()
-                    Button("Закрыть") {
-                        dismiss()
-                    }
-                    .padding()
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(8)
+                    Button("Закрыть") { dismiss() }
+                        .padding()
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(8)
                 }
                 Spacer()
 
                 if viewModel.isLoading {
-                    ProgressView("Поиск продукта...")
+                    ProgressView("Ищем продукт...")
                         .padding()
                         .background(.ultraThinMaterial)
                         .cornerRadius(8)
-                } else if let name = viewModel.productName {
+                } else if viewModel.showConfirmation {
                     VStack(spacing: 12) {
                         Text("Найден продукт:")
                             .font(.headline)
-                        Text(name)
-                            .font(.title3)
+
+                        TextField("Название продукта", text: $viewModel.confirmedProductName)
+                            .textFieldStyle(.roundedBorder)
+                            .onChange(of: viewModel.confirmedProductName) { newValue in
+                                viewModel.onProductNameChanged(newValue)
+                            }
+
+                        // Подсказки из базы
+                        if !viewModel.searchResults.isEmpty {
+                            ScrollView(.vertical, showsIndicators: false) {
+                                VStack(spacing: 4) {
+                                    ForEach(viewModel.searchResults) { ingredient in
+                                        Button {
+                                            viewModel.selectIngredient(ingredient)
+                                        } label: {
+                                            HStack {
+                                                Text(ingredient.name)
+                                                Spacer()
+                                                if let unit = ingredient.unit {
+                                                    Text(unit).foregroundColor(.secondary)
+                                                }
+                                            }
+                                            .padding(.horizontal)
+                                            .padding(.vertical, 8)
+                                            .background(Color(.systemGray6))
+                                            .cornerRadius(6)
+                                        }
+                                    }
+                                }
+                            }
+                            .frame(maxHeight: 150)
+                        }
 
                         HStack {
                             Text("Кол-во:")
@@ -40,11 +68,12 @@ struct BarcodeScannerView: View {
                                 .keyboardType(.decimalPad)
                                 .textFieldStyle(.roundedBorder)
                                 .frame(width: 80)
+                            Text(viewModel.confirmedUnit)
                         }
 
                         HStack(spacing: 16) {
-                            Button("Добавить в инвентарь") {
-                                viewModel.addToInventory()
+                            Button("Подтвердить") {
+                                Task { await viewModel.confirmAdd() }
                             }
                             .buttonStyle(.borderedProminent)
 
@@ -53,6 +82,18 @@ struct BarcodeScannerView: View {
                             }
                             .buttonStyle(.bordered)
                         }
+                    }
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(16)
+                    .padding()
+                } else if let productName = viewModel.productName, productName.hasPrefix("Добавлено:") {
+                    VStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 60))
+                            .foregroundColor(.green)
+                        Text(productName)
+                            .font(.title2)
                     }
                     .padding()
                     .background(.ultraThinMaterial)
@@ -69,14 +110,11 @@ struct BarcodeScannerView: View {
             }
             .padding()
         }
-        .onAppear {
-            viewModel.requestPermissionAndSetup()
-        }
-        .onDisappear {
-            viewModel.stopScanning()
-        }
+        .onAppear { viewModel.requestPermissionAndSetup() }
+        .onDisappear { viewModel.stopScanning() }
     }
 }
+
 // UIViewRepresentable для отображения камеры в SwiftUI
 struct CameraPreview: UIViewRepresentable {
     let session: AVCaptureSession?

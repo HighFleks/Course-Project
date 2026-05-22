@@ -50,26 +50,47 @@ struct InventoryView: View {
     }
 }
 
-// Вспомогательный экран добавления продукта (упрощённо)
 struct AddInventoryItemView: View {
     @ObservedObject var viewModel: InventoryViewModel
-    @State private var ingredientIdString = ""
+    @State private var selectedIngredient: Ingredient?
     @State private var quantityString = ""
+    @State private var showSearch = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             Form {
-                TextField("ID ингредиента", text: $ingredientIdString)
-                    .keyboardType(.numberPad)
-                TextField("Количество", text: $quantityString)
-                    .keyboardType(.decimalPad)
+                Section("Продукт") {
+                    Button {
+                        showSearch = true
+                    } label: {
+                        HStack {
+                            Text(selectedIngredient?.name ?? "Выберите продукт")
+                                .foregroundColor(selectedIngredient == nil ? .blue : .primary)
+                            Spacer()
+                            if selectedIngredient != nil {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
 
-                Button("Добавить") {
-                    if let id = Int(ingredientIdString), let qty = Double(quantityString) {
-                        viewModel.addItem(ingredientID: id, quantity: qty)
+                if let ingredient = selectedIngredient {
+                    Section("Количество (\(ingredient.unit ?? "-"))") {
+                        TextField("0.0", text: $quantityString)
+                            .keyboardType(.decimalPad)
+                    }
+                }
+
+                Section {
+                    Button("Добавить в инвентарь") {
+                        guard let ing = selectedIngredient,
+                              let qty = Double(quantityString.replacingOccurrences(of: ",", with: ".")),
+                              qty > 0 else { return }
+                        viewModel.addItem(ingredientID: ing.id, quantity: qty)
                         dismiss()
                     }
+                    .disabled(selectedIngredient == nil || quantityString.isEmpty)
                 }
             }
             .navigationTitle("Добавить продукт")
@@ -78,6 +99,10 @@ struct AddInventoryItemView: View {
                     Button("Отмена") { dismiss() }
                 }
             }
+            .sheet(isPresented: $showSearch) {
+                SelectIngredientView(selectedIngredient: $selectedIngredient)
+            }
         }
     }
 }
+
