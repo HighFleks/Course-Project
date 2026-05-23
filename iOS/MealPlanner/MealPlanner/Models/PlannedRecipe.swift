@@ -1,8 +1,7 @@
-//
-//  PlannedRecipe.swift
-//  MealPlanner
-//
-//  Created by Timofei Zaitsev on 23.05.2026.
-//
-
 import Foundation
+
+struct PlannedRecipe: Codable, Identifiable {
+    var id: Int { recipe.id }
+    let recipe: Recipe
+    let addedDate: Date
+}

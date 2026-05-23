@@ -30,7 +30,7 @@ struct LoginView: View {
                 .disabled(authVM.isLoading)
 
                 NavigationLink("Зарегистрироваться") {
-                    RegisterView()
+                    RegisterView(authVM: authVM)
                 }
             }
             .padding()

@@ -20,6 +20,10 @@ struct InventoryView: View {
                                 Text("\(item.quantity, specifier: "%.1f") \(item.ingredient.unit ?? "")")
                                     .foregroundColor(.secondary)
                             }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                viewModel.editingItem = item   // сохраняем выбранный элемент
+                            }
                         }
                         .onDelete(perform: deleteItems)
                     }
@@ -36,6 +40,9 @@ struct InventoryView: View {
             .sheet(isPresented: $showAddSheet) {
                 AddInventoryItemView(viewModel: viewModel)
             }
+            .sheet(item: $viewModel.editingItem) { item in
+                EditInventoryItemView(viewModel: viewModel, item: item)
+            }
             .onAppear {
                 viewModel.loadInventory()
             }
@@ -49,60 +56,3 @@ struct InventoryView: View {
         }
     }
 }
-
-struct AddInventoryItemView: View {
-    @ObservedObject var viewModel: InventoryViewModel
-    @State private var selectedIngredient: Ingredient?
-    @State private var quantityString = ""
-    @State private var showSearch = false
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Продукт") {
-                    Button {
-                        showSearch = true
-                    } label: {
-                        HStack {
-                            Text(selectedIngredient?.name ?? "Выберите продукт")
-                                .foregroundColor(selectedIngredient == nil ? .blue : .primary)
-                            Spacer()
-                            if selectedIngredient != nil {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                }
-
-                if let ingredient = selectedIngredient {
-                    Section("Количество (\(ingredient.unit ?? "-"))") {
-                        TextField("0.0", text: $quantityString)
-                            .keyboardType(.decimalPad)
-                    }
-                }
-
-                Section {
-                    Button("Добавить в инвентарь") {
-                        guard let ing = selectedIngredient,
-                              let qty = Double(quantityString.replacingOccurrences(of: ",", with: ".")),
-                              qty > 0 else { return }
-                        viewModel.addItem(ingredientID: ing.id, quantity: qty)
-                        dismiss()
-                    }
-                    .disabled(selectedIngredient == nil || quantityString.isEmpty)
-                }
-            }
-            .navigationTitle("Добавить продукт")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
-                }
-            }
-            .sheet(isPresented: $showSearch) {
-                SelectIngredientView(selectedIngredient: $selectedIngredient)
-            }
-        }
-    }
-}
-

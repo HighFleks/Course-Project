@@ -17,6 +17,10 @@ class APIService {
     private let baseURL = "http://172.20.10.4:8000"
     #endif
     private var authToken: String?
+    
+    var currentUserId: Int?
+    private let tokenKey = "authToken"
+    private let userIdKey = "currentUserId"
 
     private init() {}
 
@@ -92,5 +96,34 @@ class APIService {
             throw APIError.serverError(errorMessage)
         }
         return data
+    }
+    
+    func fetchAndSaveUserId() {
+        Task {
+            if let user = try? await getCurrentUser() {
+                self.currentUserId = user.id
+            }
+        }
+    }
+    
+    func saveSession(token: String, userId: Int?) {
+        UserDefaults.standard.set(token, forKey: tokenKey)
+        UserDefaults.standard.set(userId, forKey: userIdKey)
+        authToken = token
+        currentUserId = userId
+    }
+
+    func restoreSession() -> Bool {
+        guard let token = UserDefaults.standard.string(forKey: tokenKey) else { return false }
+        authToken = token
+        currentUserId = UserDefaults.standard.integer(forKey: userIdKey)
+        return true
+    }
+    
+    func clearSession() {
+        UserDefaults.standard.removeObject(forKey: tokenKey)
+        UserDefaults.standard.removeObject(forKey: userIdKey)
+        authToken = nil
+        currentUserId = nil
     }
 }

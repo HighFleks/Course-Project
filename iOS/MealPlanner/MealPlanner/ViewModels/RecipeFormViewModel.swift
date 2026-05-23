@@ -19,6 +19,7 @@ class RecipeFormViewModel: ObservableObject {
     @Published var searchResults: [Ingredient] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var successMessage: String?
 
     let categories = ["завтрак", "обед", "ужин", "десерт", "салат", "суп", "выпечка", "закуска", "напиток"]
     private let service = APIService.shared
@@ -56,24 +57,44 @@ class RecipeFormViewModel: ObservableObject {
 
     // MARK: - Сохранение (создание / обновление)
     func save(existingRecipeId: Int? = nil) {
-        Task {
-            isLoading = true
-            errorMessage = nil
-            defer { isLoading = false }
-            guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { errorMessage = "Введите название"; return }
-            guard !ingredients.isEmpty else { errorMessage = "Добавьте ингредиенты"; return }
+            Task {
+                isLoading = true
+                errorMessage = nil
+                successMessage = nil
+                defer { isLoading = false }
 
-            let body = CreateRecipeRequest(name: name, description: description, instructions: instructions, category: category, is_public: isPublic, ingredients: ingredients.map { CreateRecipeIngredient(ingredient_id: $0.ingredient.id, quantity: $0.quantity) })
-
-            do {
-                if let id = existingRecipeId {
-                    _ = try await service.request(method: "PUT", path: "/api/recipes/\(id)", body: body)
-                } else {
-                    _ = try await service.request(method: "POST", path: "/api/recipes/", body: body)
+                guard !name.trimmingCharacters(in: .whitespaces).isEmpty else {
+                    errorMessage = "Введите название"
+                    return
                 }
-            } catch { errorMessage = "Ошибка сохранения: \(error.localizedDescription)" }
+                guard !ingredients.isEmpty else {
+                    errorMessage = "Добавьте хотя бы один ингредиент"
+                    return
+                }
+
+                let body = CreateRecipeRequest(
+                    name: name,
+                    description: description,
+                    instructions: instructions,
+                    category: category,
+                    is_public: isPublic,
+                    ingredients: ingredients.map {
+                        CreateRecipeIngredient(ingredient_id: $0.ingredient.id, quantity: $0.quantity)
+                    }
+                )
+
+                do {
+                    if let id = existingRecipeId {
+                        _ = try await service.request(method: "PUT", path: "/api/recipes/\(id)", body: body)
+                    } else {
+                        _ = try await service.request(method: "POST", path: "/api/recipes/", body: body)
+                    }
+                    successMessage = existingRecipeId == nil ? "Рецепт создан!" : "Рецепт обновлён!"
+                } catch {
+                    errorMessage = "Ошибка сохранения: \(error.localizedDescription)"
+                }
+            }
         }
-    }
 }
 
 struct CreateRecipeRequest: Codable {

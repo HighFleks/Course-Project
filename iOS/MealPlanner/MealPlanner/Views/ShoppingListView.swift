@@ -78,7 +78,7 @@ struct ShoppingListView: View {
                 AddShoppingItemView(viewModel: viewModel)   // ✅ теперь эта структура существует
             }
             .sheet(isPresented: $showGenerateSheet) {
-                GenerateShoppingListView(viewModel: viewModel)   // ✅ эта тоже
+                SelectRecipesForShoppingView(viewModel: viewModel)
             }
             .onAppear {
                 viewModel.loadShoppingList()
@@ -90,37 +90,6 @@ struct ShoppingListView: View {
         for index in offsets {
             let item = viewModel.items[index]
             viewModel.deleteItem(ingredientID: item.ingredient_id)
-        }
-    }
-}
-
-// MARK: - Ручное добавление позиции
-struct AddShoppingItemView: View {
-    @ObservedObject var viewModel: ShoppingListViewModel
-    @State private var ingredientIdString = ""
-    @State private var quantityString = ""
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                TextField("ID ингредиента", text: $ingredientIdString)
-                    .keyboardType(.numberPad)
-                TextField("Количество", text: $quantityString)
-                    .keyboardType(.decimalPad)
-                Button("Добавить") {
-                    if let id = Int(ingredientIdString), let qty = Double(quantityString) {
-                        viewModel.addItem(ingredientID: id, quantity: qty)
-                        dismiss()
-                    }
-                }
-            }
-            .navigationTitle("Добавить продукт")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
-                }
-            }
         }
     }
 }
@@ -149,6 +118,65 @@ struct GenerateShoppingListView: View {
                     Button("Отмена") { dismiss() }
                 }
             }
+        }
+    }
+}
+
+struct SelectRecipesForShoppingView: View {
+    @ObservedObject var viewModel: ShoppingListViewModel
+    @State private var allRecipes: [Recipe] = []
+    @State private var selectedIds: Set<Int> = []
+    @State private var isLoading = false
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if isLoading {
+                    ProgressView()
+                } else {
+                    List(allRecipes) { recipe in
+                        HStack {
+                            Text(recipe.name)
+                            Spacer()
+                            if selectedIds.contains(recipe.id) {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if selectedIds.contains(recipe.id) {
+                                selectedIds.remove(recipe.id)
+                            } else {
+                                selectedIds.insert(recipe.id)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Выберите рецепты")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Отмена") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Сгенерировать") {
+                        viewModel.generateFromRecipes(recipeIDs: Array(selectedIds))
+                        dismiss()
+                    }
+                    .disabled(selectedIds.isEmpty)
+                }
+            }
+            .onAppear { loadRecipes() }
+        }
+    }
+
+    private func loadRecipes() {
+        isLoading = true
+        Task {
+            do {
+                let data = try await APIService.shared.get(path: "/api/recipes/")
+                allRecipes = try JSONDecoder().decode([Recipe].self, from: data)
+            } catch {}
+            isLoading = false
         }
     }
 }

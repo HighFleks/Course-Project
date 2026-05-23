@@ -11,7 +11,10 @@ struct SelectIngredientView: View {
                 TextField("Название продукта", text: $searchVM.query)
                     .textFieldStyle(.roundedBorder)
                     .padding()
-                    .onSubmit { searchVM.search() }
+                    .onChange(of: searchVM.query) {
+                        newValue in
+                        searchVM.search()
+                    }
 
                 if searchVM.isLoading {
                     ProgressView()

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RegisterView: View {
-    @StateObject private var authVM = AuthViewModel()
+    @ObservedObject var authVM: AuthViewModel
 
     var body: some View {
         VStack(spacing: 20) {

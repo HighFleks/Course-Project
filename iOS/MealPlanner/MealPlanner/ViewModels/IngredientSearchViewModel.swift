@@ -10,6 +10,7 @@ class IngredientSearchViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let service = APIService.shared
+    private var searchTask: Task<Void, Never>?
 
     func search() {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
@@ -17,18 +18,27 @@ class IngredientSearchViewModel: ObservableObject {
             results = []
             return
         }
-        Task {
-            isLoading = true
-            errorMessage = nil
-            defer { isLoading = false }
-            do {
-                let data = try await service.get(path: "/api/ingredients/search",
-                                                 queryItems: [URLQueryItem(name: "q", value: trimmed)])
-                let decoder = JSONDecoder()
-                results = try decoder.decode([Ingredient].self, from: data)
-            } catch {
-                errorMessage = "Ошибка поиска: \(error.localizedDescription)"
-                results = []
+        // Отменяем предыдущую задачу
+        searchTask?.cancel()
+        searchTask = Task {
+            // Задержка 0.3 сек, чтобы не спамить сервер
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            if Task.isCancelled { return }
+            await MainActor.run {
+                isLoading = true
+                errorMessage = nil
+                defer { isLoading = false }
+                Task {
+                    do {
+                        let data = try await service.get(path: "/api/ingredients/search",
+                                                         queryItems: [URLQueryItem(name: "q", value: trimmed)])
+                        let decoder = JSONDecoder()
+                        results = try decoder.decode([Ingredient].self, from: data)
+                    } catch {
+                        errorMessage = "Ошибка поиска: \(error.localizedDescription)"
+                        results = []
+                    }
+                }
             }
         }
     }

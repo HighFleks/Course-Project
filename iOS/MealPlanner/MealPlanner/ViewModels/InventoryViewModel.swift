@@ -7,7 +7,8 @@ class InventoryViewModel: ObservableObject {
     @Published var items: [InventoryItem] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
-
+    @Published var editingItem: InventoryItem?
+    
     private let service = APIService.shared
 
     func loadInventory() {
@@ -49,14 +50,13 @@ class InventoryViewModel: ObservableObject {
     func updateItem(ingredientID: Int, newQuantity: Double) {
         Task {
             isLoading = true
-            errorMessage = nil
             defer { isLoading = false }
             let body = InventoryUpdateRequest(quantity: newQuantity)
             do {
                 let data = try await service.request(method: "PUT", path: "/api/inventory/\(ingredientID)", body: body)
-                let updatedItem = try JSONDecoder().decode(InventoryItem.self, from: data)
+                let updated = try JSONDecoder().decode(InventoryItem.self, from: data)
                 if let index = items.firstIndex(where: { $0.ingredient_id == ingredientID }) {
-                    items[index] = updatedItem
+                    items[index] = updated
                 }
             } catch {
                 errorMessage = "Ошибка обновления: \(error.localizedDescription)"
