@@ -1,10 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserLogin, UserOut, Token
+from app.models.recipe import Recipe
+from app.models.favorite import FavoriteRecipe
+from app.models.inventory import UserInventory
+from app.models.shopping_list import ShoppingListItem
+from app.schemas.user import (
+    UserCreate, UserLogin, UserOut, Token,
+    ChangePasswordRequest, UserStats,
+)
 from app.utils.security import verify_password, get_password_hash, create_access_token
 from datetime import timedelta
 from app.config import settings
@@ -83,3 +90,45 @@ async def get_current_user(
 @router.get("/me", response_model=UserOut)
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.get("/me/stats", response_model=UserStats)
+async def get_my_stats(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Возвращает счётчики активности текущего пользователя.
+    recipes_created = await db.scalar(
+        select(func.count(Recipe.id)).where(Recipe.created_by_user_id == current_user.id)
+    )
+    favorites_count = await db.scalar(
+        select(func.count(FavoriteRecipe.id)).where(FavoriteRecipe.user_id == current_user.id)
+    )
+    inventory_items = await db.scalar(
+        select(func.count(UserInventory.id)).where(UserInventory.user_id == current_user.id)
+    )
+    shopping_items = await db.scalar(
+        select(func.count(ShoppingListItem.id)).where(ShoppingListItem.user_id == current_user.id)
+    )
+    return UserStats(
+        recipes_created=recipes_created or 0,
+        favorites_count=favorites_count or 0,
+        inventory_items=inventory_items or 0,
+        shopping_items=shopping_items or 0,
+    )
+
+
+@router.put("/me/password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(
+    payload: ChangePasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Смена пароля: требует подтверждение текущего пароля.
+    if not verify_password(payload.old_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Текущий пароль указан неверно")
+    if payload.old_password == payload.new_password:
+        raise HTTPException(status_code=400, detail="Новый пароль совпадает со старым")
+    current_user.hashed_password = get_password_hash(payload.new_password)
+    await db.commit()
+    return

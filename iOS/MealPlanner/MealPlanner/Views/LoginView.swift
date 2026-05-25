@@ -34,9 +34,6 @@ struct LoginView: View {
                 }
             }
             .padding()
-            .fullScreenCover(isPresented: $authVM.isLoggedIn) {
-                HomeView()
-            }
         }
     }
 }

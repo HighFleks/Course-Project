@@ -7,18 +7,32 @@ struct MealPlannerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if checkedSession {
-                if isLoggedIn {
-                    HomeView()
-                } else {
-                    LoginView()
-                }
-            } else {
-                // Пока проверяем сессию, можно показать пустой экран или лоадер
-                ProgressView("Восстановление сессии...")
-                    .onAppear {
-                        validateSession()
+            Group {
+                if checkedSession {
+                    if isLoggedIn {
+                        HomeView()
+                            .id("home")
+                    } else {
+                        LoginView()
+                            .id("login")
                     }
+                } else {
+                    ProgressView("Восстановление сессии...")
+                        .onAppear {
+                            validateSession()
+                        }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .sessionDidExpire)) { _ in
+                // Сервер вернул 401 (или пользователь нажал «Выйти») -
+                // принудительно возвращаем на экран входа.
+                isLoggedIn = false
+                checkedSession = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .userDidLogin)) { _ in
+                // Успешный вход или регистрация - переходим на главный экран.
+                isLoggedIn = true
+                checkedSession = true
             }
         }
     }
@@ -29,17 +43,17 @@ struct MealPlannerApp: App {
             Task {
                 do {
                     let _ = try await APIService.shared.getCurrentUser()
-                    // Успешно — сессия действительна
+                    // Успешно - сессия действительна
                     isLoggedIn = true
                 } catch {
-                    // Ошибка — токен невалиден, сбрасываем сессию
-                    APIService.shared.clearSession()
+                    // Ошибка - токен невалиден, сбрасываем сессию
+                        APIService.shared.clearSession()
                     isLoggedIn = false
                 }
                 checkedSession = true
             }
         } else {
-            // Токена нет — сразу на вход
+            // Токена нет - сразу на вход
             checkedSession = true
             isLoggedIn = false
         }

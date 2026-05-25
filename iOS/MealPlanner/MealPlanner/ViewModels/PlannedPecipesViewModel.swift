@@ -9,7 +9,7 @@ class PlannedRecipesViewModel: ObservableObject {
     @Published var plannedRecipes: [PlannedRecipe] = []
     private let storageKey = "plannedRecipes"
 
-    init() {
+    private init() {
         load()
     }
 

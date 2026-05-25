@@ -5,6 +5,7 @@ struct RecipeDetailView: View {
     let recipe: Recipe
     @StateObject private var viewModel = RecipeDetailViewModel()
     @Environment(\.dismiss) private var dismiss
+    @State private var showDeleteConfirmation = false
 
     var body: some View {
         ScrollView {
@@ -37,14 +38,14 @@ struct RecipeDetailView: View {
 
                 // Блок действий
                 VStack(spacing: 12) {
-                    // Кнопка "Приготовить" — главное действие
+                    // Кнопка "Приготовить" - главное действие
                     Button(action: { viewModel.cookRecipe(recipeId: recipe.id) }) {
                         Label("Приготовить", systemImage: "flame")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
 
-                    // Кнопка "Запланировать" — добавить недостающее в список покупок
+                    // Кнопка "Запланировать" - добавить недостающее в список покупок
                     Button(action: { viewModel.planRecipe(recipeId: recipe.id) }) {
                         Label("Запланировать", systemImage: "calendar.badge.plus")
                             .frame(maxWidth: .infinity)
@@ -59,12 +60,18 @@ struct RecipeDetailView: View {
                     }
                     .buttonStyle(.bordered)
 
-                    // Кнопка "Редактировать" (только для автора)
+                    // Кнопки "Редактировать" и "Удалить" - только для автора
                     if let currentUserId = APIService.shared.currentUserId,
                        let authorId = recipe.created_by_user_id,
                        currentUserId == authorId {
                         NavigationLink(destination: RecipeFormView(recipeToEdit: recipe)) {
                             Label("Редактировать", systemImage: "pencil")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button(role: .destructive, action: { showDeleteConfirmation = true }) {
+                            Label("Удалить рецепт", systemImage: "trash")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.bordered)
@@ -77,13 +84,6 @@ struct RecipeDetailView: View {
                         .foregroundColor(viewModel.isError ? .red : .green)
                         .padding(.top, 4)
                 }
-                if APIService.shared.currentUserId == recipe.created_by_user_id {
-                    NavigationLink(destination: RecipeFormView(recipeToEdit: recipe)) {
-                        Label("Редактировать", systemImage: "pencil")
-                    }
-                    .buttonStyle(.bordered)
-                    .padding(.top, 8)
-                }
             }
             .padding()
         }
@@ -92,6 +92,17 @@ struct RecipeDetailView: View {
         .onAppear {
             viewModel.recipe = recipe
             viewModel.checkIfFavorite(recipeId: recipe.id)
+        }
+        .onChange(of: viewModel.didDelete) { deleted in
+            if deleted { dismiss() }
+        }
+        .alert("Удалить рецепт?", isPresented: $showDeleteConfirmation) {
+            Button("Отмена", role: .cancel) {}
+            Button("Удалить", role: .destructive) {
+                viewModel.deleteRecipe(recipeId: recipe.id)
+            }
+        } message: {
+            Text("Рецепт «\(recipe.name)» будет удалён без возможности восстановления.")
         }
     }
 }

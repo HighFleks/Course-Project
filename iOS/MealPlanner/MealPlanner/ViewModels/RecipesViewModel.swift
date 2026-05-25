@@ -34,8 +34,8 @@ class RecipesViewModel: ObservableObject {
         }
     }
 
-    // категории для фильтра – можно расширить по желанию
-    let categories = ["завтрак", "обед", "ужин", "десерт", "салат"]
+    // Категории берём из общего справочника
+    let categories = RecipeCategory.all
 
     func filterByCategory(_ category: String?) {
         selectedCategory = category

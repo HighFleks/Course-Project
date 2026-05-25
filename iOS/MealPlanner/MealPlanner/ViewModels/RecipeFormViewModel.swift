@@ -13,7 +13,7 @@ class RecipeFormViewModel: ObservableObject {
     @Published var name = ""
     @Published var description = ""
     @Published var instructions = ""
-    @Published var category = "завтрак"
+    @Published var category = RecipeCategory.default
     @Published var isPublic = true
     @Published var ingredients: [RecipeIngredientDraft] = []
     @Published var searchResults: [Ingredient] = []
@@ -21,7 +21,7 @@ class RecipeFormViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var successMessage: String?
 
-    let categories = ["завтрак", "обед", "ужин", "десерт", "салат", "суп", "выпечка", "закуска", "напиток"]
+    let categories = RecipeCategory.all
     private let service = APIService.shared
 
     // MARK: - Загрузка данных для редактирования
@@ -29,7 +29,11 @@ class RecipeFormViewModel: ObservableObject {
         name = recipe.name
         description = recipe.description ?? ""
         instructions = recipe.instructions ?? ""
-        category = recipe.category ?? "завтрак"
+        if let cat = recipe.category, RecipeCategory.all.contains(cat) {
+            category = cat
+        } else {
+            category = RecipeCategory.default
+        }
         isPublic = recipe.is_public ?? true
         if let ings = recipe.ingredients {
             ingredients = ings.map { RecipeIngredientDraft(ingredient: $0.ingredient, quantity: $0.quantity) }
@@ -87,7 +91,7 @@ class RecipeFormViewModel: ObservableObject {
                     if let id = existingRecipeId {
                         _ = try await service.request(method: "PUT", path: "/api/recipes/\(id)", body: body)
                     } else {
-                        _ = try await service.request(method: "POST", path: "/api/recipes/", body: body)
+                        _ = try await service.request(method: "POST", path: "/api/recipes/create", body: body)
                     }
                     successMessage = existingRecipeId == nil ? "Рецепт создан!" : "Рецепт обновлён!"
                 } catch {

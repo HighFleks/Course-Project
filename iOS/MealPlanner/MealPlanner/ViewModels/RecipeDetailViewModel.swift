@@ -6,10 +6,28 @@ class RecipeDetailViewModel: ObservableObject {
     @Published var isFavorite = false
     @Published var statusMessage: String?
     @Published var isError = false
+    @Published var didDelete = false
 
     private let service = APIService.shared
     var recipe: Recipe?
     private let plannedVM = PlannedRecipesViewModel.shared
+
+    func deleteRecipe(recipeId: Int) {
+        Task {
+            do {
+                _ = try await service.request(method: "DELETE", path: "/api/recipes/\(recipeId)")
+                if let recipe = recipe {
+                    plannedVM.remove(recipe: recipe)
+                }
+                statusMessage = "Рецепт удалён."
+                isError = false
+                didDelete = true
+            } catch {
+                statusMessage = "Не удалось удалить рецепт."
+                isError = true
+            }
+        }
+    }
 
     func checkIfFavorite(recipeId: Int) {
         Task {
@@ -43,6 +61,10 @@ class RecipeDetailViewModel: ObservableObject {
         Task {
             do {
                 _ = try await service.request(method: "POST", path: "/api/recipes/\(recipeId)/cook")
+                // Если рецепт был в плане приготовления - убираем его оттуда
+                if let recipe = recipe {
+                    plannedVM.remove(recipe: recipe)
+                }
                 statusMessage = "Блюдо приготовлено! Ингредиенты списаны."
                 isError = false
             } catch let error as APIError {

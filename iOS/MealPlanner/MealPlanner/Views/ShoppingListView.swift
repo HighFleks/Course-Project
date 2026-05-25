@@ -75,7 +75,7 @@ struct ShoppingListView: View {
                 }
             }
             .sheet(isPresented: $showAddSheet) {
-                AddShoppingItemView(viewModel: viewModel)   // ✅ теперь эта структура существует
+                AddShoppingItemView(viewModel: viewModel)
             }
             .sheet(isPresented: $showGenerateSheet) {
                 SelectRecipesForShoppingView(viewModel: viewModel)
@@ -95,33 +95,6 @@ struct ShoppingListView: View {
 }
 
 // MARK: - Генерация списка из рецептов
-struct GenerateShoppingListView: View {
-    @ObservedObject var viewModel: ShoppingListViewModel
-    @State private var recipeIdsText = ""
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                TextField("ID рецептов через запятую (например 1,2)", text: $recipeIdsText)
-                Button("Сгенерировать") {
-                    let ids = recipeIdsText
-                        .split(separator: ",")
-                        .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
-                    viewModel.generateFromRecipes(recipeIDs: ids)
-                    dismiss()
-                }
-            }
-            .navigationTitle("Генерация списка")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
-                }
-            }
-        }
-    }
-}
-
 struct SelectRecipesForShoppingView: View {
     @ObservedObject var viewModel: ShoppingListViewModel
     @State private var allRecipes: [Recipe] = []

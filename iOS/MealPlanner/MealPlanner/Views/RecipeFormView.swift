@@ -52,12 +52,8 @@ struct RecipeFormView: View {
                 Section {
                     Button(recipeToEdit == nil ? "Создать рецепт" : "Сохранить изменения") {
                         viewModel.save(existingRecipeId: recipeToEdit?.id)
-                        if viewModel.errorMessage == nil { dismiss() }
                     }
                     .disabled(viewModel.isLoading)
-                }
-                if let error = viewModel.errorMessage {
-                    Text(error).foregroundColor(.red)
                 }
             }
             .navigationTitle(recipeToEdit == nil ? "Новый рецепт" : "Редактирование")

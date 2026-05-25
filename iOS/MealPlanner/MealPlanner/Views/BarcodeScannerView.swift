@@ -27,11 +27,22 @@ struct BarcodeScannerView: View {
                         .cornerRadius(8)
                 } else if viewModel.showConfirmation {
                     VStack(spacing: 12) {
-                        Text("Найден продукт:")
-                            .font(.headline)
+                        if viewModel.isManualEntry {
+                            VStack(spacing: 4) {
+                                Text("Продукт не найден")
+                                    .font(.headline)
+                                Text("Введите данные вручную")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        } else {
+                            Text("Найден продукт:")
+                                .font(.headline)
+                        }
 
                         TextField("Название продукта", text: $viewModel.confirmedProductName)
                             .textFieldStyle(.roundedBorder)
+                            .autocapitalization(.sentences)
                             .onChange(of: viewModel.confirmedProductName) { newValue in
                                 viewModel.onProductNameChanged(newValue)
                             }
@@ -68,7 +79,21 @@ struct BarcodeScannerView: View {
                                 .keyboardType(.decimalPad)
                                 .textFieldStyle(.roundedBorder)
                                 .frame(width: 80)
-                            Text(viewModel.confirmedUnit)
+                            if viewModel.isManualEntry && viewModel.ingredientId == nil {
+                                Picker("", selection: $viewModel.confirmedUnit) {
+                                    ForEach(["шт", "г", "мл"], id: \.self) { Text($0).tag($0) }
+                                }
+                                .pickerStyle(.segmented)
+                                .frame(width: 140)
+                            } else {
+                                Text(viewModel.confirmedUnit)
+                            }
+                        }
+
+                        if let error = viewModel.errorMessage {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundColor(.red)
                         }
 
                         HStack(spacing: 16) {

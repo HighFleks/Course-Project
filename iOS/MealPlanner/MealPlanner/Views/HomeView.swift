@@ -39,6 +39,16 @@ struct HomeView: View {
                 }
             }
             .navigationTitle("Meal Planner")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink(destination: ProfileView()) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.blue)
+                    }
+                    .accessibilityLabel("Профиль")
+                }
+            }
             .sheet(isPresented: $isShowingRecipeForm) {
                 RecipeFormView()
             }

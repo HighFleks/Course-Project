@@ -105,7 +105,7 @@ async def create_recipe(
 
 # ------------------- ФИКСИРОВАННЫЕ ПУТИ (ДО ДИНАМИЧЕСКИХ) -------------------
 
-@router.get("/available")  # response_model=list[RecipeOut] (пока закомментировано для отладки)
+@router.get("/available", response_model=list[RecipeOut])
 async def get_available_recipes(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)

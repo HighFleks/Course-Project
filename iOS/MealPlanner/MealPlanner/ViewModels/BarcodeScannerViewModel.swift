@@ -11,9 +11,10 @@ class BarcodeScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutp
     @Published var errorMessage: String?
     @Published var isLoading = false
     @Published var showConfirmation = false
+    @Published var isManualEntry = false
     @Published var quantity: Double = 1.0
     @Published var confirmedProductName: String = ""
-    @Published var confirmedUnit: String = ""
+    @Published var confirmedUnit: String = "шт"
 
     // Для поиска похожих ингредиентов
     @Published var searchResults: [Ingredient] = []
@@ -96,16 +97,22 @@ class BarcodeScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutp
                 self.confirmedProductName = decoded.product_name
                 self.confirmedUnit = decoded.unit ?? "шт"
                 self.quantity = extractQuantity(from: decoded.product_name)
+                self.isManualEntry = false
                 self.showConfirmation = true
                 // Сразу выполним поиск для подсказок
                 searchIngredients(query: decoded.product_name)
             } catch {
-                self.errorMessage = "Продукт не найден"
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                    self.scannedBarcode = nil
-                    self.productName = nil
-                    self.ingredientId = nil
-                }
+                // Продукт не найден ни в кэше, ни в OpenFoodFacts —
+                // переключаемся в режим ручного ввода.
+                self.productName = nil
+                self.ingredientId = nil
+                self.confirmedProductName = ""
+                self.confirmedUnit = "шт"
+                self.quantity = 1.0
+                self.searchResults = []
+                self.isManualEntry = true
+                self.errorMessage = nil
+                self.showConfirmation = true
             }
         }
     }
@@ -153,13 +160,21 @@ class BarcodeScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutp
 
     // Подтверждение добавления
     func confirmAdd() async {
-        // Если ingredientId отсутствует или название изменилось так, что нет соответствия,
-        // попытаемся найти или создать ингредиент с текущим именем
-        if ingredientId == nil || confirmedProductName != productName {
-            // Ищем точное совпадение
-            if let found = try? await findOrCreateIngredient(name: confirmedProductName, unit: confirmedUnit) {
+        let trimmedName = confirmedProductName.trimmingCharacters(in: .whitespaces)
+        guard !trimmedName.isEmpty else {
+            errorMessage = "Введите название продукта"
+            return
+        }
+        guard quantity > 0 else {
+            errorMessage = "Количество должно быть больше нуля"
+            return
+        }
+
+        // Если ingredientId отсутствует или название изменилось — ищем/создаём ингредиент.
+        if ingredientId == nil || trimmedName != productName {
+            if let found = try? await findOrCreateIngredient(name: trimmedName, unit: confirmedUnit) {
                 ingredientId = found.id
-                confirmedUnit = found.unit ?? "шт"
+                confirmedUnit = found.unit ?? confirmedUnit
             } else {
                 errorMessage = "Не удалось сохранить продукт"
                 return
@@ -172,7 +187,7 @@ class BarcodeScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutp
             // Успех
             showConfirmation = false
             errorMessage = nil
-            productName = "Добавлено: \(confirmedProductName)"
+            productName = "Добавлено: \(trimmedName)"
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
                 self?.reset()
             }
@@ -182,7 +197,7 @@ class BarcodeScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutp
     }
 
     private func findOrCreateIngredient(name: String, unit: String) async -> Ingredient? {
-        // Сначала поищем точное совпадение
+        // Ищем точное совпадение
         if let data = try? await service.get(path: "/api/ingredients/search",
                                             queryItems: [URLQueryItem(name: "q", value: name)]),
            let results = try? JSONDecoder().decode([Ingredient].self, from: data),
@@ -231,8 +246,9 @@ class BarcodeScannerViewModel: NSObject, ObservableObject, AVCaptureMetadataOutp
         errorMessage = nil
         quantity = 1.0
         showConfirmation = false
+        isManualEntry = false
         confirmedProductName = ""
-        confirmedUnit = ""
+        confirmedUnit = "шт"
         searchResults = []
     }
 }

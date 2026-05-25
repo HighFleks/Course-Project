@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct PlannedRecipesView: View {
-    @StateObject private var viewModel = PlannedRecipesViewModel()
+    @ObservedObject private var viewModel = PlannedRecipesViewModel.shared
 
     var body: some View {
         Group {

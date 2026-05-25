@@ -11,8 +11,7 @@ struct SelectIngredientView: View {
                 TextField("Название продукта", text: $searchVM.query)
                     .textFieldStyle(.roundedBorder)
                     .padding()
-                    .onChange(of: searchVM.query) {
-                        newValue in
+                    .onChange(of: searchVM.query) { _ in
                         searchVM.search()
                     }
 
@@ -42,11 +41,6 @@ struct SelectIngredientView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Отмена") { dismiss() }
-                }
-            }
-            .onChange(of: searchVM.query) { _ in
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    searchVM.search()
                 }
             }
         }
